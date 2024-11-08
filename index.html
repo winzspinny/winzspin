@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+            <style>* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #c9d6ff, #e2e2e2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.glass-box {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    padding: 20px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    margin-bottom: 20px;
+}
+
+.glass-box h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.wheel-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 400px;
+}
+
+canvas {
+    width: 100%;
+    height: auto;
+    border-radius: 50%;
+}
+
+.options input, .options button {
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    margin: 5px;
+    font-size: 16px;
+}
+
+.options input {
+    width: 60%;
+}
+
+.options button {
+    background-color: #4caf50;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.options button:hover {
+    background-color: #45a049;
+}
+
+#optionsList {
+    font-size: 14px;
+    color: #555;
+    margin-top: 10px;
+}
+
+/* Result Popup */
+.result-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.5s ease, visibility 0.5s;
+}
+
+.result-popup.active {
+    visibility: visible;
+    opacity: 1;
+}
+
+.result-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    animation: popUp 0.5s ease;
+}
+
+.result-content h2 {
+    color: #333;
+}
+
+/* Error Notification */
+.error-notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ff4747;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 10px;
+    font-size: 16px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    opacity: 1;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.error-notification.fade-out {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+}
+
+
+.result-content p {
+    font-size: 18px;
+    margin: 10px 0;
+}
+
+.result-content button {
+    padding: 10px 20px;
+    border: none;
+    background: #4caf50;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+@keyframes popUp {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+</style>
+        </head>
+        <body>
+            
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhizSpin</title>
+    <link rel="stylesheet" href="style.css">
+
+
+    <div class="container">
+        <div class="glass-box">
+            <h1>WhizSpin</h1>
+            <p>Enter options below and click "Spin the Wheel"</p>
+            <div class="options">
+                <input type="text" id="optionInput" placeholder="Add option" maxlength="30">
+                <button onclick="addOption()">Add Option</button>
+                <button id="spinButton" onclick="spinWheel()">Spin the Wheel</button>
+            </div>
+            <p id="optionsList">Options added: guy, r, fgdrf</p>
+        </div>
+        <div class="wheel-container">
+            <canvas id="wheel" width="400" height="400"></canvas>
+        </div>
+
+        <!-- Custom In-page Popup for Result -->
+        <div class="result-popup" id="resultPopup">
+            <div class="result-content">
+                <h2>Congratulations!</h2>
+                <p id="resultText">You got: r</p>
+                <button onclick="closePopup()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+
+
+
+            <script>const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const spinButton = document.getElementById("spinButton");
+const optionInput = document.getElementById("optionInput");
+const optionsList = document.getElementById("optionsList");
+const resultPopup = document.getElementById("resultPopup");
+const resultText = document.getElementById("resultText");
+
+let options = [];
+let startAngle = 0;
+let spinAngle = 0;
+let spinning = false;
+
+function addOption() {
+    const option = optionInput.value.trim();
+    if (option.length > 0 && option.length <= 30 && options.length < 10) {
+        options.push(option);
+        updateOptionsList();
+        optionInput.value = "";
+        if (options.length >= 3) {
+            spinButton.disabled = false;
+        }
+        drawWheel();
+    } else {
+        showError("Option must be between 1-30 letters and no more than 10 options.");
+    }
+}
+
+function showError(message) {
+    const notification = document.createElement("div");
+    notification.className = "error-notification";
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    // Fade out after 3 seconds
+    setTimeout(() => {
+        notification.classList.add("fade-out");
+        notification.addEventListener("transitionend", () => notification.remove());
+    }, 3000);
+}
+
+
+function updateOptionsList() {
+    optionsList.textContent = "Options added: " + options.join(", ");
+}
+
+function drawWheel() {
+    const colors = ["#FF6D68", "#FFA205", "#68D8FF", "#ABFF68", "#FF68C4", "#68AFFF", "#C468FF", "#68FFAA", "#FFD268", "#D868FF"];
+    const arc = 2 * Math.PI / options.length;
+    const radius = canvas.width / 2;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    options.forEach((option, i) => {
+        const angle = startAngle + i * arc;
+        ctx.beginPath();
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.moveTo(radius, radius);
+        ctx.arc(radius, radius, radius, angle, angle + arc, false);
+        ctx.fill();
+        ctx.save();
+
+        ctx.translate(radius + Math.cos(angle + arc / 2) * (radius - 40), radius + Math.sin(angle + arc / 2) * (radius - 40));
+        ctx.rotate(angle + arc / 2 + Math.PI / 2);
+        ctx.fillStyle = "#FFF";
+        ctx.font = "16px Arial";
+        ctx.fillText(option, -ctx.measureText(option).width / 2, 0);
+        ctx.restore();
+    });
+}
+
+function spinWheel() {
+    if (spinning) return;
+    spinning = true;
+    let duration = 2000 + Math.random() * 3000;
+    let start = null;
+
+    function animate(time) {
+        if (!start) start = time;
+        let elapsed = time - start;
+        spinAngle += Math.min(50, 0.1 + (duration - elapsed) / 50);
+
+        if (elapsed < duration) {
+            requestAnimationFrame(animate);
+        } else {
+            spinAngle %= 2 * Math.PI;
+            const selectedOption = Math.floor((spinAngle / (2 * Math.PI)) * options.length);
+            showResult(options[selectedOption]);
+            spinning = false;
+        }
+
+        startAngle = (startAngle + spinAngle / 100) % (2 * Math.PI);
+        drawWheel();
+    }
+
+    requestAnimationFrame(animate);
+}
+
+function showResult(result) {
+    resultText.textContent = `You got: ${result}`;
+    resultPopup.classList.add("active");
+}
+
+function closePopup() {
+    resultPopup.classList.remove("active");
+}
+
+// Resize the canvas dynamically for responsiveness
+function resizeCanvas() {
+    const containerWidth = document.querySelector('.wheel-container').offsetWidth;
+    canvas.width = containerWidth;
+    canvas.height = containerWidth;
+    drawWheel();
+}
+
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+</script>
+        
+    
+</body>
